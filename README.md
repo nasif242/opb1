@@ -31,3 +31,22 @@ UR ranks
 ALL of the above
 
 (See attachments in the repo for file contents.)
+
+## Deploy to Render (24/7) ✅
+
+- Create a **Web Service** on Render and connect your GitHub repository.
+- In Render, set the environment variables: `TOKEN`, `MONGO_URI`, `CLIENT_ID`, `OWNER_ID`, etc. **Do not** commit your `.env` to the repo.
+- Render runs the service and provides a public URL. The bot listens on `process.env.PORT` so Render's port routing works automatically.
+- The app exposes a lightweight health endpoint: `GET /`, `GET /health` and `GET /_health` which return HTTP 200 `OK`.
+- Use UptimeRobot to ping your Render service URL (e.g., `https://your-service.onrender.com/health`) every 5 minutes to keep it continuously running.
+
+Local testing:
+
+```bash
+PORT=3000 node index.js
+curl http://localhost:3000/health
+```
+
+---
+
+If you'd like, I can add a `Procfile`, a `render.yaml` template, or step-by-step instructions for creating the Render service.

@@ -1,0 +1,12 @@
+# Example Render service configuration (customize before using)
+# See https://render.com/docs for more details
+
+services:
+  - type: web
+    name: onepiecebot
+    env: node
+    plan: starter # change to managed-cpu if needed
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    # Optionally expose health path in Render's health checks
+    # healthCheckPath: "/health"

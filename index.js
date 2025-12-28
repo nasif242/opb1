@@ -78,3 +78,22 @@ for (const file of eventFiles) {
 }
 
 client.login(process.env.TOKEN);
+
+// Start a small HTTP server so Render and uptime monitors (e.g., UptimeRobot)
+// can check that the service is alive. This avoids adding express as a
+// dependency and works with Render's $PORT environment variable.
+import http from "http";
+
+const PORT = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+  if (req.method === "GET" && (req.url === "/" || req.url === "/health" || req.url === "/_health")) {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    return res.end("OK");
+  }
+
+  res.writeHead(404);
+  res.end();
+});
+
+server.listen(PORT, () => console.log(`Health server listening on port ${PORT}`));
