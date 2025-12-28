@@ -300,7 +300,13 @@ if (!process.env.TOKEN) {
   // helper sleep
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
+  // If you want to skip REST checks that may rate limit you, set DISABLE_REST_CHECK=true in env
+  const DISABLE_REST_CHECK = process.env.DISABLE_REST_CHECK === 'true';
+  if (DISABLE_REST_CHECK) console.log('DISABLE_REST_CHECK=true — skipping REST token validation to avoid rate limits');
+
   const checkTokenRestWithRetries = async (token, maxAttempts = 3) => {
+    if (DISABLE_REST_CHECK) return { ok: true, skipped: true };
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const resp = await fetch('https://discord.com/api/v10/users/@me', {
@@ -320,7 +326,7 @@ if (!process.env.TOKEN) {
         }
 
         if (resp.status === 429) {
-          // Rate limited; try to read retry_after
+          // Rate limited; try to read retry_after but DON'T block startup by waiting multiple retries here.
           let retryAfterMs = 0;
           try {
             const json = await resp.json();
@@ -334,11 +340,8 @@ if (!process.env.TOKEN) {
             const h = Number(headerRetry);
             if (!Number.isNaN(h)) retryAfterMs = Math.ceil(h * 1000);
           }
-          const backoff = Math.ceil(5000 * Math.pow(2, attempt - 1));
-          const waitMs = Math.max(retryAfterMs || 0, backoff);
-          console.warn(`⚠️ Token REST check returned 429 (rate limited). Attempt ${attempt}/${maxAttempts}. Waiting ${waitMs}ms before retrying.`);
-          await sleep(waitMs);
-          continue;
+          console.warn(`⚠️ Token REST check returned 429 (rate limited). Not retrying further here to avoid startup delay. Retry-After: ${retryAfterMs}ms`);
+          return { ok: false, status: 429, error: 'rate_limited', retryAfterMs };
         }
 
         console.error('❌ Token REST check returned status', resp.status);
@@ -393,7 +396,7 @@ if (!process.env.TOKEN) {
         process.exit(1);
       }
       if (tokenRes.error === 'rate_limited' || tokenRes.status === 429) {
-        console.warn('⚠️ Token REST check is being rate limited. Proceeding to websocket login, but consider avoiding repeated REST checks and auto-registering commands on every deploy.');
+        console.warn('⚠️ Token REST check is being rate limited. Proceeding to websocket login immediately, to avoid long startup delays. Consider setting DISABLE_REST_CHECK=true to skip REST checks on startup.');
       } else {
         console.error('Token REST check failed:', tokenRes);
       }
