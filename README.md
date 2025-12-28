@@ -65,6 +65,14 @@ Steps to use the fallback mode:
 3. Keep `TOKEN` set (required for command registration). Prefer registering slash commands manually using `npm run deploy` once instead of auto-registering every deploy to avoid rate limits.
 4. If gateway login fails due to egress restrictions, the service will still accept `/interactions` POSTs and run the associated command handlers.
 
+### Running in interactions-only mode (web-only)
+
+If your host blocks WebSocket egress or you prefer to run the bot as a pure web service, set `DISABLE_GATEWAY=true` or `INTERACTIONS_ONLY=true` in your environment. This will skip the Discord gateway login and run the interactions webhook handler only.
+
+- Ensure `DISCORD_PUBLIC_KEY` is set and your application interactions endpoint is configured to `https://<your-service>/interactions`.
+- Register slash commands (use guild-scoped for fast testing): `GUILD_ID=<your_guild> npm run deploy` or run `node deploy-commands.js` locally.
+- Use `/status` to verify `gateway_mode: "disabled"` when the gateway is intentionally disabled.
+
 Notes:
 - Message-based prefix commands ("op help") still require a gateway connection (Message Content intent) and will not work in webhook-only mode. Move to slash commands for full web-only compatibility.
 - Keep your public key secret only in environment variables; do not commit it.

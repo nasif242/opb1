@@ -116,6 +116,7 @@ const server = http.createServer((req, res) => {
       port: PORT,
       discord: client.user ? `${client.user.tag}` : null,
       discord_logged_in: !!client.user,
+      gateway_mode: globalThis.GATEWAY_MODE || (client.user ? 'connected' : 'disconnected'),
       discord_uptime_ms: client.uptime || null,
       uptimeSeconds: Math.floor(process.uptime()),
     };
@@ -409,15 +410,25 @@ if (!process.env.TOKEN) {
     client.on('shardDisconnect', (event, shardId) => console.warn('shard disconnect:', { event, shardId }));
 
     try {
-      const loginRes = await loginWithRetries(process.env.TOKEN, 3);
-      if (!loginRes.ok) {
-        console.error('❌ Discord websocket login failed after retries:', loginRes.error && loginRes.error.message ? loginRes.error.message : loginRes.error);
-        process.exit(1);
+      if (process.env.DISABLE_GATEWAY === 'true' || process.env.INTERACTIONS_ONLY === 'true') {
+        console.log('DISABLE_GATEWAY/INTERACTIONS_ONLY is set — skipping Discord gateway login and running in interactions-only mode.');
+        globalThis.GATEWAY_MODE = 'disabled';
+      } else {
+        const loginRes = await loginWithRetries(process.env.TOKEN, 3);
+        if (!loginRes.ok) {
+          console.error('❌ Discord websocket login failed after retries:', loginRes.error && loginRes.error.message ? loginRes.error.message : loginRes.error);
+          console.log('Falling back to interactions-only mode; set DISABLE_GATEWAY=true to skip gateway on future deploys.');
+          globalThis.GATEWAY_MODE = 'failed';
+        } else {
+          console.log('✅ Discord login initiated — waiting for ready event...');
+          globalThis.GATEWAY_MODE = 'connecting';
+        }
       }
-      console.log('✅ Discord login initiated — waiting for ready event...');
     } catch (err) {
       console.error('❌ Unexpected error during websocket login:', err && err.message ? err.message : err);
-      process.exit(1);
+      console.log('Falling back to interactions-only mode due to unexpected error.');
+      globalThis.GATEWAY_MODE = 'failed';
+      // do not exit; continue running as interactions-only fallback
     }
   })();
 }
