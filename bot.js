@@ -112,13 +112,17 @@ if (!process.env.TOKEN) {
   process.exit(1);
 }
 
-console.log("🚀 Calling client.login() now…");
-
-client.once("ready", () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
-});
-
 client.on("error", err => console.error("Client error:", err));
 client.on("shardError", err => console.error("Shard error:", err));
 
-await client.login(process.env.TOKEN);
+(async () => {
+  try {
+    console.log("🚀 Calling client.login() now…");
+    await client.login(process.env.TOKEN);
+    console.log(`✅ Logged in as ${client.user.tag}`);
+  } catch (err) {
+    console.error('❌ client.login() failed:', err);
+    // Optionally exit with non-zero to surface failure to process managers
+    // process.exit(1);
+  }
+})();
