@@ -36,6 +36,19 @@ export async function execute(interactionOrMessage, client){
   })();
   const userId = user.id;
 
+  // Ensure we have a proper Discord `User` to read username/avatar from
+  let displayUser = user;
+  try {
+    if (!displayUser || typeof displayUser.displayAvatarURL !== "function" || !displayUser.username) {
+      displayUser = await client.users.fetch(userId).catch(() => null);
+    }
+  } catch (e) {
+    displayUser = displayUser || null;
+  }
+
+  const displayName = (displayUser && displayUser.username) ? displayUser.username : (user && user.username) ? user.username : `User ${userId}`;
+  const avatarURL = (displayUser && typeof displayUser.displayAvatarURL === "function") ? displayUser.displayAvatarURL() : null;
+
   // load models
   const [bal, prog, pullDoc, inv] = await Promise.all([
     Balance.findOne({ userId }),
@@ -88,8 +101,8 @@ export async function execute(interactionOrMessage, client){
   // build embed (white)
   const embed = new EmbedBuilder()
     .setColor(0xFFFFFF)
-    .setTitle(`${user.username || (user.tag || userId)}`)
-    .setThumbnail(user.displayAvatarURL ? user.displayAvatarURL() : null)
+    .setTitle(`${displayName}`)
+    .setThumbnail(avatarURL)
     .setDescription(
       `Level ${level} • XP to next: ${xpToNext}\n${bar}\n\n` +
       `**Wealth:** ${fmtNumber(wealth)}¥\n` +

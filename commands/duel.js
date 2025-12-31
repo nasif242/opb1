@@ -75,7 +75,13 @@ export async function execute(interactionOrMessage) {
     return channel.send(reply);
   }
 
-  if (!p2Progress || !p2Progress.team || p2Progress.team.length === 0) {
+  if (!p2Progress) {
+    const reply = "That user doesn't have an account yet. You can invite them to start with: `op start` or `/start`.";
+    if (isInteraction) return interactionOrMessage.reply({ content: "That user doesn't have an account yet. They should run `op start` or `/start` to register.", ephemeral: true });
+    return channel.send(opponent.username + " doesn't have an account yet. Tell them to run `op start` or `/start` to register.");
+  }
+
+  if (!p2Progress.team || p2Progress.team.length === 0) {
     const reply = `${opponent.username} doesn't have a team set up yet.`;
     if (isInteraction) return interactionOrMessage.reply({ content: reply, ephemeral: true });
     return channel.send(reply);

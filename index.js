@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import nacl from 'tweetnacl';
 import { Client, GatewayIntentBits } from 'discord.js';
+import { connectDB } from './config/database.js';
 
 // Minimal index.js: one Discord client, single Express health server.
 
@@ -67,6 +68,17 @@ try {
   console.error('Error loading commands for interactions webhook:', e && e.message ? e.message : e);
 }
 
+// Connect to MongoDB if configured so command handlers can access models
+if (process.env.MONGO_URI) {
+  try {
+    await connectDB();
+  } catch (e) {
+    console.error('Failed to connect to MongoDB in interactions mode:', e && e.message ? e.message : e);
+  }
+} else {
+  console.warn('MONGO_URI not set; database features will be disabled for interactions webhook');
+}
+
 // Helper: verify Discord interaction signature
 function verifyDiscordRequest(req) {
   const signature = req.get('x-signature-ed25519');
@@ -123,6 +135,25 @@ app.post('/interactions', async (req, res) => {
   if (payload.type === 2) {
     const name = payload.data && payload.data.name;
     const cmd = commands.get(name);
+    // Require account for all commands except `start`
+    try {
+      const invokerId = payload.member?.user?.id || payload.user?.id;
+      if (name !== 'start') {
+        // Progress model may not be loaded in some environments — attempt dynamic import
+        try {
+          const Progress = (await import('./models/Progress.js')).default;
+          const acct = await Progress.findOne({ userId: String(invokerId) });
+          if (!acct) {
+            await sendInteractionResponse(payload.id, payload.token, { content: "You don't have an account! Start your journey with the command `op start` or `/start`.", flags: 64 });
+            return res.status(200).end();
+          }
+        } catch (e) {
+          console.error('Failed to run account check for interaction:', e && e.message ? e.message : e);
+        }
+      }
+    } catch (e) {
+      console.error('Invoker account check error:', e && e.message ? e.message : e);
+    }
     if (!cmd) {
       // reply with ephemeral message
       await sendInteractionResponse(payload.id, payload.token, { content: `Command not found: ${name}`, flags: 64 });

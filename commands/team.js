@@ -52,7 +52,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interactionOrMessage, client) {
   const isInteraction = typeof interactionOrMessage.isCommand === "function" || typeof interactionOrMessage.isChatInputCommand === "function";
-  const user = isInteraction ? interactionOrMessage.user : interactionOrMessage.author;
+  let user = isInteraction ? interactionOrMessage.user : interactionOrMessage.author;
   
   // Guard against missing user
   if (!user || !user.id) {
@@ -61,7 +61,22 @@ export async function execute(interactionOrMessage, client) {
   }
   
   const channel = isInteraction ? interactionOrMessage.channel : interactionOrMessage.channel;
-  const userId = user.id;
+  let userId = user.id;
+
+  // allow message form `op team view @user` or `op team @user` to inspect others
+  if (!isInteraction) {
+    const parts = interactionOrMessage.content.trim().split(/\s+/);
+    // detect mention token in args (look for a token with digits)
+    const maybeMention = parts.find((p, i) => i > 1 && /[0-9]{6,}/.test(p));
+    if (maybeMention) {
+      const id = maybeMention.replace(/[^0-9]/g, "");
+      if (id) {
+        userId = id;
+        // try to set a simple username for display
+        user = { id, username: maybeMention };
+      }
+    }
+  }
 
   const prog = await Progress.findOne({ userId }) || new Progress({ userId, cards: {}, team: [] });
 
@@ -188,11 +203,24 @@ export async function execute(interactionOrMessage, client) {
 
   const desc = (linesWithBoost.length ? linesWithBoost.join("\n") : "No team set. Use `op team add <card>` or `/team add <card>`.") + (boostLine ? "\n\nTeam Boosts: " + boostLine : "");
 
+  // Ensure we have a proper Discord `User` to read username/avatar from
+  let displayUser = user;
+  try {
+    if (!displayUser || typeof displayUser.displayAvatarURL !== "function" || !displayUser.username) {
+      displayUser = await client.users.fetch(userId).catch(() => null);
+    }
+  } catch (e) {
+    displayUser = displayUser || null;
+  }
+
+  const displayName = (displayUser && displayUser.username) ? displayUser.username : (user && user.username) ? user.username : `User ${userId}`;
+  const avatarURL = (displayUser && typeof displayUser.displayAvatarURL === "function") ? displayUser.displayAvatarURL() : null;
+
   const embed = new EmbedBuilder()
-    .setTitle(`${user.username}'s Team`)
+    .setTitle(`${displayName}'s Team`)
     .setColor(chosenColor)
     .setDescription(desc)
-    .setFooter({ text: `Requested by ${user.username}`, iconURL: user.displayAvatarURL() });
+    .setFooter({ text: `Requested by ${displayName}`, iconURL: avatarURL });
 
   if (isInteraction) await interactionOrMessage.reply({ embeds: [embed] }); else await channel.send({ embeds: [embed] });
 

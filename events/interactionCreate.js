@@ -33,6 +33,9 @@ export async function execute(interaction, client) {
       const isBtn = typeof interaction.isButton === 'function' ? interaction.isButton() : false;
       const isSel = typeof interaction.isStringSelectMenu === 'function' ? interaction.isStringSelectMenu() : false;
       console.log(`interactionCreate: type=${interaction.type} user=${interaction.user?.tag || interaction.user?.id} id=${interaction.id} isCommand=${interaction.isCommand ? interaction.isCommand() : false} isButton=${isBtn} isStringSelect=${isSel} customId=${interaction.customId || ''}`);
+      try {
+        console.log(`HANDLER HIT → type=${interaction.type} chat=${typeof interaction.isChatInputCommand === 'function' ? interaction.isChatInputCommand() : false} name=${interaction.commandName || ''}`);
+      } catch (e) {}
     } catch (e) {
       console.log('interactionCreate: unable to stringify interaction metadata', e && e.message ? e.message : e);
     }
@@ -164,7 +167,7 @@ export async function execute(interaction, client) {
     if (interaction.isButton()) {
       const id = interaction.customId || "";
       // only handle known prefixes (include shop_ and duel_). Let per-message duel_* collectors handle duel interactions.
-      if (!id.startsWith("info_") && !id.startsWith("collection_") && !id.startsWith("quest_") && !id.startsWith("help_") && !id.startsWith("drop_claim") && !id.startsWith("shop_") && !id.startsWith("duel_")) return;
+      if (!id.startsWith("info_") && !id.startsWith("collection_") && !id.startsWith("quest_") && !id.startsWith("help_") && !id.startsWith("drop_claim") && !id.startsWith("shop_") && !id.startsWith("duel_") && !id.startsWith("leaderboard_")) return;
       // ignore duel_* here so message-level collectors in `commands/duel.js` receive them
       if (id.startsWith("duel_")) return;
 
@@ -300,6 +303,85 @@ export async function execute(interaction, client) {
 
         await interaction.update({ embeds: [embed], components: rows });
         return;
+      }
+
+      // Leaderboard buttons: leaderboard_<mode>:<userId>
+      if (id.startsWith('leaderboard_')) {
+        const parts = id.split(":");
+        const action = parts[0]; // e.g., leaderboard_level
+        const ownerId = parts[1];
+        if (interaction.user.id !== ownerId) {
+          await interaction.reply({ content: 'Only the original requester can use these buttons.', ephemeral: true });
+          return;
+        }
+
+        const mode = action.replace('leaderboard_', '');
+        try {
+          if (mode === 'level') {
+            const Balance = (await import('../models/Balance.js')).default;
+            const top = await Balance.find({}).sort({ level: -1, xp: -1 }).limit(10).lean();
+            const lines = await Promise.all(top.map(async (b, idx) => {
+              let name = b.userId;
+              try { const u = await interaction.client.users.fetch(String(b.userId)).catch(() => null); if (u) name = u.username; } catch (e) {}
+              return `**${idx + 1}. ${name}** — Level: ${b.level || 0}`;
+            }));
+            const embed = new EmbedBuilder().setTitle('Leaderboard — Level').setColor(0xFFFFFF).setDescription(lines.join('\n') || 'No data');
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId(`leaderboard_level:${ownerId}`).setLabel('Level').setStyle(ButtonStyle.Primary),
+              new ButtonBuilder().setCustomId(`leaderboard_wealth:${ownerId}`).setLabel('Wealth').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId(`leaderboard_collection:${ownerId}`).setLabel('Collection').setStyle(ButtonStyle.Secondary)
+            );
+            await interaction.update({ embeds: [embed], components: [row] });
+            return;
+          }
+
+          if (mode === 'wealth') {
+            const Balance = (await import('../models/Balance.js')).default;
+            const top = await Balance.find({}).sort({ amount: -1 }).limit(10).lean();
+            const lines = await Promise.all(top.map(async (b, idx) => {
+              let name = b.userId;
+              try { const u = await interaction.client.users.fetch(String(b.userId)).catch(() => null); if (u) name = u.username; } catch (e) {}
+              return `**${idx + 1}. ${name}** — ${b.amount || 0} beli¥`;
+            }));
+            const embed = new EmbedBuilder().setTitle('Leaderboard — Wealth').setColor(0xFFFFFF).setDescription(lines.join('\n') || 'No data');
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId(`leaderboard_level:${ownerId}`).setLabel('Level').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId(`leaderboard_wealth:${ownerId}`).setLabel('Wealth').setStyle(ButtonStyle.Primary),
+              new ButtonBuilder().setCustomId(`leaderboard_collection:${ownerId}`).setLabel('Collection').setStyle(ButtonStyle.Secondary)
+            );
+            await interaction.update({ embeds: [embed], components: [row] });
+            return;
+          }
+
+          if (mode === 'collection') {
+            const Progress = (await import('../models/Progress.js')).default;
+            const progs = await Progress.find({}).lean();
+            const arr = progs.map(p => {
+              const cards = p.cards || {};
+              const count = (cards instanceof Object && !(cards instanceof Array)) ? Object.keys(cards).length : (cards.size || 0);
+              return { userId: p.userId, count };
+            });
+            arr.sort((a, b) => b.count - a.count);
+            const top = arr.slice(0, 10);
+            const lines = await Promise.all(top.map(async (it, idx) => {
+              let name = it.userId;
+              try { const u = await interaction.client.users.fetch(String(it.userId)).catch(() => null); if (u) name = u.username; } catch (e) {}
+              return `**${idx + 1}. ${name}** — ${it.count} unique cards`;
+            }));
+            const embed = new EmbedBuilder().setTitle('Leaderboard — Collection').setColor(0xFFFFFF).setDescription(lines.join('\n') || 'No data');
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId(`leaderboard_level:${ownerId}`).setLabel('Level').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId(`leaderboard_wealth:${ownerId}`).setLabel('Wealth').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId(`leaderboard_collection:${ownerId}`).setLabel('Collection').setStyle(ButtonStyle.Primary)
+            );
+            await interaction.update({ embeds: [embed], components: [row] });
+            return;
+          }
+        } catch (e) {
+          console.error('Leaderboard handler error:', e && e.message ? e.message : e);
+          await interaction.reply({ content: 'Error loading leaderboard.', ephemeral: true });
+          return;
+        }
       }
 
       // Handle quest view/claim buttons
@@ -934,16 +1016,20 @@ export async function execute(interaction, client) {
   }
 
   // fallback to chat input commands (slash)
-  if (!interaction.isChatInputCommand()) return;
-  const command = client.commands.get(interaction.commandName.toLowerCase());
-  if (!command) return;
+  if (interaction.isChatInputCommand && interaction.isChatInputCommand()) {
+    const cmdName = (interaction.commandName || '').toLowerCase();
+    const command = client.commands.get(cmdName);
+    if (!command) {
+      console.log('Command not found:', interaction.commandName);
+      try { if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: 'Command not found on this bot instance.', ephemeral: true }); } catch (e) {}
+      return;
+    }
 
-  try {
-    await command.execute(interaction, client);
-  } catch (error) {
-    console.error(error);
     try {
-      if (!interaction.replied) await interaction.reply({ content: "There was an error executing this command.", ephemeral: true });
-    } catch (e) {}
+      await command.execute(interaction, client);
+    } catch (error) {
+      console.error('Error executing command:', error && error.message ? error.message : error);
+      try { if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: 'There was an error executing this command.', ephemeral: true }); } catch (e) {}
+    }
   }
 }

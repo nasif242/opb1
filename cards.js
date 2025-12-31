@@ -2282,7 +2282,7 @@ export const cards = [
 
   // TITLE: Member of the Buggy pirates
   { id: "mohji_b_01", name: "mohji", title: "Member of the Buggy pirates", rank: "B", power: 44, attackRange: [9, 19], health: 110, type: "Support", ability: "Boosts team HP by 15%",
-    boost: { hp: 15 }, image: "https://files.catbox.moe/tmzqwm.webp" },
+    boost: { hp: 15 }, image: "https://files.catbox.moe/tmzqwm.webp", isUpgrade: true },
   { id: "mohji_c_02", name: "mohji", title: "Member of the Buggy pirates", rank: "C", power: 20, attackRange: [4, 12], health: 72, type: "Support", ability: "Boosts team HP by 10%",
     boost: { hp: 10 }, image: "https://files.catbox.moe/khoesd.webp" },
   { id: "Richie_b_01", name: "Richie", title: "Member of the Buggy pirates", rank: "B", power: 48, attackRange: [10, 22], health: 118, type: "Attack", ability: null, image: "https://files.catbox.moe/q8yru9.webp" },
@@ -2358,7 +2358,7 @@ export const cards = [
   { id: "MaskedDeuce_b_01", name: "Masked Deuce", title: "Member of the spade Pirates", rank: "B", power: 44, attackRange: [9, 19], health: 110, type: "Support", ability: "Boosts team HP by 8%",
     boost: { hp: 8 }, image: "https://files.catbox.moe/1hczb3.webp" },
   { id: "MaskedDeuce_b_02", name: "Masked Deuce", title: "Member of the whitebeard pirates", rank: "B", power: 48, attackRange: [10, 22], health: 120, type: "Support", ability: "Boosts team HP by 15%",
-    boost: { hp: 15 }, image: "https://files.catbox.moe/ucw065.webp" },
+    boost: { hp: 15 }, image: "https://files.catbox.moe/ucw065.webp", isUpgrade: true },
 
   // Van Augur
   { id: "VanAugur_a_01", name: "Van Augur", title: "Sniper of the Blackbeard pirates", rank: "A", power: 130, attackRange: [22, 40], health: 190, type: "Attack", specialAttack: { name: "Sonic Shooting", range: [120, 160], gif: "https://files.catbox.moe/olejop.gif" }, ability: null, image: "https://files.catbox.moe/rxkcab.webp", evolutions: ["VanAugur_a_02"] },

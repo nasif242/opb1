@@ -6,6 +6,7 @@ import { connectDB } from "./config/database.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import Progress from './models/Progress.js';
 
 config();
 await connectDB();
@@ -73,6 +74,19 @@ client.on("messageCreate", async (message) => {
 
     if (!command) {
       return;
+    }
+
+    // Require account for all commands except `start`
+    try {
+      if (commandName !== 'start') {
+        const acct = await Progress.findOne({ userId: String(message.author.id) });
+        if (!acct) {
+          const reply = "You don't have an account! Start your journey with the command `op start` or `/start`.";
+          return await message.channel.send(reply);
+        }
+      }
+    } catch (e) {
+      console.error('Account check failed:', e && e.message ? e.message : e);
     }
 
     // call the same execute exported for slash commands; pass message and client

@@ -6,8 +6,19 @@ export const aliases = ["inv"];
 
 export async function execute(interactionOrMessage, client) {
   const isInteraction = typeof interactionOrMessage.isCommand === "function" || typeof interactionOrMessage.isChatInputCommand === "function";
-  const user = isInteraction ? interactionOrMessage.user : interactionOrMessage.author;
   const channel = isInteraction ? interactionOrMessage.channel : interactionOrMessage.channel;
+  let user;
+  if (isInteraction) {
+    user = interactionOrMessage.user;
+  } else {
+    // allow `op inventory @user` to view another user's inventory
+    const parts = interactionOrMessage.content.trim().split(/\s+/);
+    if (parts[2]) {
+      const maybe = parts[2].replace(/[^0-9]/g, "");
+      if (maybe) user = { id: maybe, username: parts[2] };
+    }
+    if (!user) user = interactionOrMessage.author;
+  }
   const userId = user.id;
 
   let inv = await Inventory.findOne({ userId });
@@ -16,10 +27,22 @@ export async function execute(interactionOrMessage, client) {
     await inv.save();
   }
 
+  // Ensure we have a proper Discord `User` to read username/avatar from
+  let displayUser = user;
+  try {
+    if (!displayUser || typeof displayUser.displayAvatarURL !== "function" || !displayUser.username) {
+      displayUser = await client.users.fetch(userId).catch(() => null);
+    }
+  } catch (e) {
+    displayUser = displayUser || null;
+  }
+  const displayName = (displayUser && displayUser.username) ? displayUser.username : (user && user.username) ? user.username : `User ${userId}`;
+  const avatarURL = (displayUser && typeof displayUser.displayAvatarURL === "function") ? displayUser.displayAvatarURL() : null;
+
   const embed = new EmbedBuilder()
-    .setTitle(`${user.username}'s Inventory`)
+    .setTitle(`${displayName}'s Inventory`)
     .setColor(0xFFFFFF)
-    .setThumbnail(user.displayAvatarURL());
+    .setThumbnail(avatarURL);
 
   const lines = [];
   const chests = inv.chests || { C:0, B:0, A:0, S:0 };
