@@ -8,13 +8,34 @@ if (process.env.ALLOW_LEGACY_BOT_FILE !== 'true') {
   process.exit(0);
 }
 
-import { Client, GatewayIntentBits, Collection } from "discord.js";
 import { config } from "dotenv";
 import { connectDB } from "./config/database.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import Progress from './models/Progress.js';
+
+// Robustly load discord.js (try package root, then dist path)
+async function loadDiscord() {
+  try {
+    return await import('discord.js');
+  } catch (e1) {
+    try {
+      return await import('discord.js/dist/index.js');
+    } catch (e2) {
+      console.error('Failed to import discord.js (bot.js):', e1 && e1.message ? e1.message : e1, e2 && e2.message ? e2.message : e2);
+      return null;
+    }
+  }
+}
+
+const discord = await loadDiscord();
+if (!discord) {
+  console.error('discord.js could not be loaded in bot.js.');
+  process.exit(1);
+}
+
+const { Client, GatewayIntentBits, Collection } = discord;
 
 config();
 await connectDB();
