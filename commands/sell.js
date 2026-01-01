@@ -11,7 +11,7 @@ export const data = new SlashCommandBuilder()
 export const category = "Economy";
 export const description = "Sell a card for money";
 
-const PRICE_BY_RANK = { C: 50, B: 100, A: 500, S: 1000, SS: 2500, UR: 10000 };
+const PRICE_BY_RANK = { C: 50, B: 100, A: 500, S: 1000, SS: 2500, UR: 10000, Z: 2500 };
 
 export async function execute(interactionOrMessage, client) {
   const isInteraction = typeof interactionOrMessage.isCommand === "function" || typeof interactionOrMessage.isChatInputCommand === "function";

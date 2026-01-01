@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js/dist/index.js';
+import { SlashCommandBuilder } from 'discord.js';
 import Progress from '../models/Progress.js';
 import Inventory from '../models/Inventory.js';
 import { fuzzyFindCard } from '../lib/cardEmbed.js';

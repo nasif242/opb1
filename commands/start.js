@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js/dist/index.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import Progress from '../models/Progress.js';
 import Inventory from '../models/Inventory.js';
 import Balance from '../models/Balance.js';

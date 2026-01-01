@@ -8,6 +8,7 @@ export const RANKS = {
   S: { name: "S", color: 0xe74c3c, icon: "https://files.catbox.moe/wrx7hl.png", value: 4 },
   SS: { name: "SS", color: 0xff4000, icon: "https://files.catbox.moe/wvqbnp.webp", value: 5 }, // dark orange
   UR: { name: "UR", color: 0x8B0000, icon: "https://files.catbox.moe/200d01.webp", value: 6 }, // dark red
+  Z: { name: "Z", color: 0x000000, icon: "https://files.catbox.moe/xeuw9j.webp", value: 7 }, // special event rank
 };
 
 import { extraCards } from "./cards.extra.js";

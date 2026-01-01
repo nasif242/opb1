@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js/dist/index.js';
+import { EmbedBuilder } from 'discord.js';
 import Progress from '../models/Progress.js';
 import Pull from '../models/Pull.js';
 import Balance from '../models/Balance.js';
